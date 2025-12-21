@@ -1,6 +1,6 @@
 module github.com/luxfi/go-bip32
 
-go 1.25
+go 1.25.5
 
 require (
 	github.com/FactomProject/basen v0.0.0-20150613233007-fe3947df716e
