@@ -8,17 +8,16 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/FactomProject/basen"
-	"github.com/FactomProject/btcutilecc"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"golang.org/x/crypto/ripemd160"
 )
 
 var (
-	curve       = btcutil.Secp256k1()
+	curve       = secp256k1.S256()
 	curveParams = curve.Params()
 
-	// BitcoinBase58Encoding is the encoding used for bitcoin addresses
-	BitcoinBase58Encoding = basen.NewEncoding("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
+	// Base58 alphabet used for Bitcoin addresses
+	base58Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 )
 
 //
@@ -71,6 +70,87 @@ func hash160(data []byte) ([]byte, error) {
 }
 
 //
+// Base58 Encoding (Bitcoin style)
+//
+
+func base58Encode(data []byte) string {
+	// Count leading zeros
+	var zeros int
+	for _, b := range data {
+		if b == 0 {
+			zeros++
+		} else {
+			break
+		}
+	}
+
+	// Convert to big integer
+	num := new(big.Int).SetBytes(data)
+	base := big.NewInt(58)
+	zero := big.NewInt(0)
+	mod := new(big.Int)
+
+	var result []byte
+	for num.Cmp(zero) > 0 {
+		num.DivMod(num, base, mod)
+		result = append(result, base58Alphabet[mod.Int64()])
+	}
+
+	// Add leading '1's for each leading zero byte
+	for i := 0; i < zeros; i++ {
+		result = append(result, '1')
+	}
+
+	// Reverse the result
+	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+		result[i], result[j] = result[j], result[i]
+	}
+
+	return string(result)
+}
+
+func base58Decode(data string) ([]byte, error) {
+	// Count leading '1's (zeros in output)
+	var zeros int
+	for _, c := range data {
+		if c == '1' {
+			zeros++
+		} else {
+			break
+		}
+	}
+
+	// Build alphabet index map
+	alphabetMap := make(map[rune]int64)
+	for i, c := range base58Alphabet {
+		alphabetMap[c] = int64(i)
+	}
+
+	// Convert from base58
+	num := big.NewInt(0)
+	base := big.NewInt(58)
+	for _, c := range data {
+		idx, ok := alphabetMap[c]
+		if !ok {
+			return nil, fmt.Errorf("invalid base58 character: %c", c)
+		}
+		num.Mul(num, base)
+		num.Add(num, big.NewInt(idx))
+	}
+
+	// Convert to bytes
+	result := num.Bytes()
+
+	// Add leading zeros
+	if zeros > 0 {
+		prefix := make([]byte, zeros)
+		result = append(prefix, result...)
+	}
+
+	return result, nil
+}
+
+//
 // Encoding
 //
 
@@ -91,23 +171,17 @@ func addChecksumToBytes(data []byte) ([]byte, error) {
 	return append(data, checksum...), nil
 }
 
-func base58Encode(data []byte) string {
-	return BitcoinBase58Encoding.EncodeToString(data)
-}
-
-func base58Decode(data string) ([]byte, error) {
-	return BitcoinBase58Encoding.DecodeString(data)
-}
-
 // Keys
 func publicKeyForPrivateKey(key []byte) []byte {
-	return compressPublicKey(curve.ScalarBaseMult(key))
+	x, y := curve.ScalarBaseMult(key)
+	return compressPublicKey(x, y)
 }
 
 func addPublicKeys(key1 []byte, key2 []byte) []byte {
 	x1, y1 := expandPublicKey(key1)
 	x2, y2 := expandPublicKey(key2)
-	return compressPublicKey(curve.Add(x1, y1, x2, y2))
+	x, y := curve.Add(x1, y1, x2, y2)
+	return compressPublicKey(x, y)
 }
 
 func addPrivateKeys(key1 []byte, key2 []byte) []byte {
