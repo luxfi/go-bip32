@@ -3,9 +3,9 @@ module github.com/luxfi/go-bip32
 go 1.26.4
 
 require (
-	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.0
+	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/crypto v0.48.0
+	golang.org/x/crypto v0.53.0
 )
 
 require (
