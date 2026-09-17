@@ -42,6 +42,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4.1.16
         version: 4.3.3
+      '@types/mdx':
+        specifier: 2.0.14
+        version: 2.0.14
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.3
