@@ -183,7 +183,7 @@ func TestPublicParentPublicChildDerivation(t *testing.T) {
 }
 
 func TestNewSeed(t *testing.T) {
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		seed, err := NewSeed()
 		assert.NoError(t, err)
 		assert.Equal(t, 256, len(seed))
